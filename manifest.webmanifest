@@ -1,0 +1,17 @@
+{
+  "name": "Hermes University Agent",
+  "short_name": "Hermes",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ededeb",
+  "theme_color": "#ededeb",
+  "description": "A chat-first personal university dashboard for courses, deadlines, and daily study planning.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

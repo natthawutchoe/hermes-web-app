@@ -1,0 +1,139 @@
+﻿{
+    "settings":  {
+                     "hourTarget":  3,
+                     "riskWindow":  3
+                 },
+    "weekOffset":  -1,
+    "courses":  [
+                    {
+                        "id":  "c-01132326-65",
+                        "code":  "01132326-65",
+                        "name":  "Organization Development",
+                        "color":  "amber"
+                    },
+                    {
+                        "id":  "c-03521101-67",
+                        "code":  "03521101-67",
+                        "name":  "Sea and Life",
+                        "color":  "amber"
+                    },
+                    {
+                        "id":  "c-01132417-65",
+                        "code":  "01132417-65",
+                        "name":  "Sustainability Management",
+                        "color":  "amber"
+                    },
+                    {
+                        "id":  "c-01132333-65",
+                        "code":  "01132333-65",
+                        "name":  "Business Information Systems",
+                        "color":  "green"
+                    },
+                    {
+                        "id":  "c-03754221-67",
+                        "code":  "03754221-67",
+                        "name":  "Basic English Pronunciation",
+                        "color":  "green"
+                    },
+                    {
+                        "id":  "c-01132332-65",
+                        "code":  "01132332-65",
+                        "name":  "Quantitative Analysis for Decision Making",
+                        "color":  "blue"
+                    },
+                    {
+                        "id":  "c-01362101-67",
+                        "code":  "01362101-67",
+                        "name":  "Chinese I",
+                        "color":  "blue"
+                    }
+                ],
+    "classes":  [
+                    {
+                        "id":  "class-org-dev-tue",
+                        "day":  "Tue",
+                        "dayIndex":  2,
+                        "start":  "13:00",
+                        "end":  "16:00",
+                        "courseCode":  "01132326-65",
+                        "title":  "Organization Development",
+                        "room":  "10212",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-sea-life-wed",
+                        "day":  "Wed",
+                        "dayIndex":  3,
+                        "start":  "09:00",
+                        "end":  "12:00",
+                        "courseCode":  "03521101-67",
+                        "title":  "Sea and Life",
+                        "room":  "17402",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-sustainability-wed",
+                        "day":  "Wed",
+                        "dayIndex":  3,
+                        "start":  "13:00",
+                        "end":  "16:00",
+                        "courseCode":  "01132417-65",
+                        "title":  "Sustainability Management",
+                        "room":  "27603",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-bis-thu",
+                        "day":  "Thu",
+                        "dayIndex":  4,
+                        "start":  "09:00",
+                        "end":  "12:00",
+                        "courseCode":  "01132333-65",
+                        "title":  "Business Information Systems",
+                        "room":  "27501",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-english-thu",
+                        "day":  "Thu",
+                        "dayIndex":  4,
+                        "start":  "13:00",
+                        "end":  "16:00",
+                        "courseCode":  "03754221-67",
+                        "title":  "Basic English Pronunciation",
+                        "room":  "10207",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-quant-fri",
+                        "day":  "Fri",
+                        "dayIndex":  5,
+                        "start":  "09:00",
+                        "end":  "12:00",
+                        "courseCode":  "01132332-65",
+                        "title":  "Quantitative Analysis for Decision Making",
+                        "room":  "17303",
+                        "section":  "800"
+                    },
+                    {
+                        "id":  "class-chinese-fri",
+                        "day":  "Fri",
+                        "dayIndex":  5,
+                        "start":  "13:00",
+                        "end":  "16:00",
+                        "courseCode":  "01362101-67",
+                        "title":  "Chinese I",
+                        "room":  "17205",
+                        "section":  "801"
+                    }
+                ],
+    "tasks":  [
+
+              ],
+    "chat":  [
+                 {
+                     "role":  "hermes",
+                     "text":  "Inbox พร้อมแล้ว ส่งงานหรือ deadline จาก Discord/Inbox มาได้เลย เดี๋ยวผมแยกเข้าวิชาและ Dashboard ให้"
+                 }
+             ]
+}

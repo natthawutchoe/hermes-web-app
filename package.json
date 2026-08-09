@@ -1,0 +1,9 @@
+{
+  "name": "hermes-web-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": "20.x"
+  }
+}
