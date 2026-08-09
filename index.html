@@ -200,10 +200,13 @@
                 <option value="7">7 days</option>
               </select>
             </label>
-            <label class="setting-row">
+            <div class="setting-row">
               <span>Cloud app key</span>
-              <input id="appKeyInput" type="password" placeholder="Paste HERMES_APP_KEY for cloud sync" autocomplete="off" />
-            </label>
+              <div class="setting-inline">
+                <input id="appKeyInput" type="password" placeholder="Paste HERMES_APP_KEY for cloud sync" autocomplete="off" />
+                <button class="ghost-btn" id="saveAppKeyButton" type="button">Save</button>
+              </div>
+            </div>
             <div class="setting-block">
               <div>
                 <p class="eyebrow">Next Term</p>
