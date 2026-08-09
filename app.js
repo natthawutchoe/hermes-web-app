@@ -635,6 +635,11 @@ $("#appKeyInput").addEventListener("change", (event) => {
   loadStateFromApi({ silent: false });
 });
 
+$("#saveAppKeyButton").addEventListener("click", () => {
+  localStorage.setItem(APP_KEY_STORAGE_KEY, $("#appKeyInput").value.trim());
+  loadStateFromApi({ silent: false });
+});
+
 $("#scheduleImport").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
