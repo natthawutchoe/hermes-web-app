@@ -551,6 +551,18 @@ select:focus {
   font-weight: 700;
 }
 
+.setting-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.setting-inline .ghost-btn {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
 .setting-block {
   display: grid;
   gap: 10px;
