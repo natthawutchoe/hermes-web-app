@@ -1,9 +1,9 @@
-const CACHE_NAME = "hermes-university-agent-v9";
+const CACHE_NAME = "hermes-university-agent-v10";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js?v=9",
+  "./styles.css?v=10",
+  "./app.js?v=10",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
