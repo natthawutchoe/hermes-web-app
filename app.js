@@ -624,8 +624,14 @@ $("#riskWindow").addEventListener("change", (event) => {
   renderAll();
 });
 
-$("#appKeyInput").addEventListener("change", (event) => {
+function saveAppKeyFromInput(event) {
   localStorage.setItem(APP_KEY_STORAGE_KEY, event.target.value.trim());
+}
+
+$("#appKeyInput").addEventListener("input", saveAppKeyFromInput);
+
+$("#appKeyInput").addEventListener("change", (event) => {
+  saveAppKeyFromInput(event);
   loadStateFromApi({ silent: false });
 });
 
