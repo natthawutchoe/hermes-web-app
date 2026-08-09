@@ -21,6 +21,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -93,6 +94,7 @@ button {
 }
 
 .phone {
+  width: min(100%, 430px);
   height: min(850px, calc(100vh - 46px));
   max-height: 850px;
   min-height: 720px;
@@ -104,6 +106,12 @@ button {
   position: relative;
   display: flex;
   flex-direction: column;
+  overscroll-behavior-x: none;
+}
+
+.phone,
+.phone * {
+  max-width: 100%;
 }
 
 .topbar {
@@ -203,6 +211,9 @@ h2 {
   display: none;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
   padding: 0 16px 92px;
 }
 
@@ -212,12 +223,13 @@ h2 {
 
 .summary {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   margin-bottom: 12px;
 }
 
 .metric {
+  min-width: 0;
   min-height: 112px;
   background: var(--panel);
   border-radius: 8px;
@@ -254,6 +266,7 @@ h2 {
 }
 
 .panel {
+  min-width: 0;
   background: var(--panel);
   border-radius: 8px;
   padding: 16px;
@@ -295,6 +308,8 @@ h2 {
 .chat-bubble,
 .timeline-item,
 .empty-state {
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -341,6 +356,11 @@ h2 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+}
+
+.task-top > * {
+  min-width: 0;
 }
 
 .task-title {
@@ -385,6 +405,7 @@ h2 {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .task-actions button,
@@ -404,8 +425,9 @@ h2 {
 
 .week-strip {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
 }
 
 .day-pill {
@@ -494,6 +516,7 @@ select:focus {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ghost-btn {
@@ -516,6 +539,8 @@ select:focus {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .progress {
