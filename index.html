@@ -259,7 +259,7 @@
     </dialog>
 
     <script>
-      fetch("app.js?v=12")
+      fetch(`app.js?v=13&runtime=${Date.now()}`)
         .then((response) => response.text())
         .then((source) => {
           const start = source.indexOf("const STORAGE_KEY");
