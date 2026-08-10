@@ -55,6 +55,37 @@ $env:HERMES_APP_KEY = "same-long-private-random-string"
 powershell -NoProfile -ExecutionPolicy Bypass -File .\discord-bridge.ps1 -HermesApiUrl "https://your-app.vercel.app/api/brain-dump" -ReplyMode silent
 ```
 
+## Discord Slash Command
+
+This is the recommended daily setup because it does not require Termux, Windows, or a Gateway bridge to stay online.
+
+Set this in Vercel Project Settings:
+
+```text
+DISCORD_PUBLIC_KEY=your-discord-application-public-key
+```
+
+In Discord Developer Portal, set the Interactions Endpoint URL to:
+
+```text
+https://hermes-web-app-gilt.vercel.app/api/discord
+```
+
+Then register the `/hermes` command once:
+
+```powershell
+$env:DISCORD_TOKEN = "your-discord-bot-token"
+$env:DISCORD_APPLICATION_ID = "your-discord-application-id"
+$env:DISCORD_GUILD_ID = "optional-test-server-id"
+node .\register-discord-command.js
+```
+
+Use it in Discord:
+
+```text
+/hermes text: FIN301 ส่ง slide วันพุธหน้า
+```
+
 ## Recommended Launch Order
 
 1. Run `supabase.sql` in Supabase.
