@@ -2,6 +2,274 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Hermes University Agent</title>
+    <meta name="theme-color" content="#ededeb" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css?v=12" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="desktop-nav" aria-label="Primary">
+        <div class="brand">Hermes</div>
+        <button class="nav-item is-active" data-tab="dashboard" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-5H4v5Z" /></svg></span>
+          Dashboard
+        </button>
+        <button class="nav-item" data-tab="chat" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H8l-3 3V5Z" /></svg></span>
+          Chat
+        </button>
+        <button class="nav-item" data-tab="courses" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Zm1 12.5A1.5 1.5 0 0 0 8.5 18H17v-2H8.5A1.5 1.5 0 0 0 7 16.5Z" /></svg></span>
+          Courses
+        </button>
+        <button class="nav-item" data-tab="calendar" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h2v3H7V3Zm8 0h2v3h-2V3ZM5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 6v8h14v-8H5Z" /></svg></span>
+          Calendar
+        </button>
+        <button class="nav-item" data-tab="settings" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.4 13.5a7.5 7.5 0 0 0 .1-1.5 7.5 7.5 0 0 0-.1-1.5l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 2.5A8 8 0 0 0 7 6L4.6 5l-2 3.5 2 1.5a7.5 7.5 0 0 0-.1 1.5 7.5 7.5 0 0 0 .1 1.5l-2 1.5 2 3.5L7 17a8 8 0 0 0 2.6 1.5L10 21h4l.4-2.5A8 8 0 0 0 17 17l2.4 1 2-3.5-2-1.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" /></svg></span>
+          Settings
+        </button>
+      </aside>
+
+      <section class="phone" aria-label="Hermes app">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Personal University Agent</p>
+            <h1>Hermes</h1>
+          </div>
+          <div class="top-actions">
+            <button class="icon-btn" id="searchButton" type="button" title="Add to Inbox" aria-label="Add to Inbox">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v10H8l-3 3V5Zm13 13h2v-3h3v-2h-3v-3h-2v3h-3v2h3v3Z" /></svg>
+            </button>
+          </div>
+        </header>
+
+        <nav class="tabs" aria-label="View switcher">
+          <button class="tab is-active" data-tab="dashboard" type="button">Today</button>
+          <button class="tab" data-tab="chat" type="button">Inbox</button>
+          <button class="tab" data-tab="courses" type="button">Courses</button>
+          <button class="tab" data-tab="calendar" type="button">Week</button>
+        </nav>
+
+        <section class="view is-active" id="dashboardView">
+          <div class="summary">
+            <article class="metric metric-dark">
+              <p>Tasks Due</p>
+              <strong id="metricDue">0</strong>
+              <span id="metricDueText">No pressure today</span>
+            </article>
+            <article class="metric">
+              <p>High Risk</p>
+              <strong id="metricRisk">0</strong>
+              <span>Need attention</span>
+            </article>
+            <article class="metric">
+              <p>Study Hours</p>
+              <strong id="metricHours">0h</strong>
+              <span>Planned today</span>
+            </article>
+            <article class="metric">
+              <p>Courses</p>
+              <strong id="metricCourses">0</strong>
+              <span>Active this week</span>
+            </article>
+          </div>
+
+          <article class="panel hero-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Focus</p>
+                <h2>Today Plan</h2>
+              </div>
+              <button class="small-icon" data-tab="chat" type="button" title="Add brain dump" aria-label="Add brain dump">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" /></svg>
+              </button>
+            </div>
+            <div class="focus-list" id="todayPlan"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Schedule</p>
+                <h2>Today Classes</h2>
+              </div>
+              <button class="plain-btn" data-tab="calendar" type="button">Week</button>
+            </div>
+            <div class="class-list" id="todayClasses"></div>
+          </article>
+
+          <article class="panel calendar-panel">
+            <div class="panel-head">
+              <button class="plain-btn" id="prevWeek" type="button" title="Previous week" aria-label="Previous week">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 5-7 7 7 7 1.4-1.4-5.6-5.6 5.6-5.6L15.5 5Z" /></svg>
+              </button>
+              <h2 id="weekTitle">This Week</h2>
+              <button class="plain-btn" id="nextWeek" type="button" title="Next week" aria-label="Next week">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 19 7-7-7-7-1.4 1.4 5.6 5.6-5.6 5.6L8.5 19Z" /></svg>
+              </button>
+            </div>
+            <div class="week-strip" id="weekStrip"></div>
+            <div class="deadline-callout" id="nextDeadline"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Upcoming Deadlines</h2>
+              <button class="plain-btn" data-tab="calendar" type="button">View</button>
+            </div>
+            <div class="deadline-list" id="deadlineList"></div>
+          </article>
+        </section>
+
+        <section class="view" id="chatView">
+          <article class="panel chat-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Brain Dump</p>
+                <h2>Tell Hermes anything</h2>
+              </div>
+            </div>
+            <div class="chat-log" id="chatLog"></div>
+            <form class="composer" id="brainForm">
+              <textarea id="brainInput" rows="4" placeholder="เช่น BIS มี project database ส่งศุกร์หน้า ต้องทำ ER diagram กับ presentation ยังไม่ได้เริ่ม"></textarea>
+              <div class="composer-row">
+                <button class="ghost-btn" id="sampleButton" type="button">Example</button>
+                <button class="primary-btn" type="submit">Add to Hermes</button>
+              </div>
+            </form>
+          </article>
+        </section>
+
+        <section class="view" id="coursesView">
+          <article class="panel">
+            <div class="panel-head">
+              <h2>Courses</h2>
+              <button class="small-icon" id="addCourseButton" type="button" title="Add course" aria-label="Add course">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" /></svg>
+              </button>
+            </div>
+            <div class="course-list" id="courseList"></div>
+          </article>
+        </section>
+
+        <section class="view" id="calendarView">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Schedule</p>
+                <h2>Class Week</h2>
+              </div>
+              <button class="ghost-btn" id="resetDemoButton" type="button">Reset</button>
+            </div>
+            <div class="class-list" id="weeklyClasses"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Timeline</p>
+                <h2>Deadlines</h2>
+              </div>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </article>
+        </section>
+
+        <section class="view" id="settingsView">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Daily App</p>
+                <h2>Settings</h2>
+              </div>
+            </div>
+            <label class="setting-row">
+              <span>Daily plan target</span>
+              <input id="hourTarget" type="number" min="1" max="10" step="0.5" />
+            </label>
+            <label class="setting-row">
+              <span>Risk window</span>
+              <select id="riskWindow">
+                <option value="2">2 days</option>
+                <option value="3">3 days</option>
+                <option value="5">5 days</option>
+                <option value="7">7 days</option>
+              </select>
+            </label>
+            <div class="setting-row">
+              <span>Cloud app key</span>
+              <div class="setting-inline">
+                <input id="appKeyInput" type="password" placeholder="Paste HERMES_APP_KEY for cloud sync" autocomplete="off" />
+                <button class="ghost-btn" id="saveAppKeyButton" type="button">Save</button>
+              </div>
+            </div>
+            <div class="setting-block">
+              <div>
+                <p class="eyebrow">Next Term</p>
+                <h2>Import Schedule</h2>
+              </div>
+              <input id="scheduleImport" type="file" accept="application/json,.json" />
+              <div class="composer-row">
+                <button class="ghost-btn" id="downloadScheduleButton" type="button">Template</button>
+              </div>
+              <p class="helper-text" id="scheduleStatus">Upload a Hermes schedule JSON to replace courses and class times.</p>
+            </div>
+          </article>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Mobile primary">
+          <button class="bottom-item is-active" data-tab="dashboard" type="button">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-5H4v5Z" /></svg></span>
+            Dashboard
+          </button>
+          <button class="bottom-item" data-tab="chat" type="button">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H8l-3 3V5Z" /></svg></span>
+            Chat
+          </button>
+          <button class="bottom-item" data-tab="courses" type="button">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Zm1 12.5A1.5 1.5 0 0 0 8.5 18H17v-2H8.5A1.5 1.5 0 0 0 7 16.5Z" /></svg></span>
+            Courses
+          </button>
+          <button class="bottom-item" data-tab="calendar" type="button">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h2v3H7V3Zm8 0h2v3h-2V3ZM5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 6v8h14v-8H5Z" /></svg></span>
+            Calendar
+          </button>
+          <button class="bottom-item" data-tab="settings" type="button">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.4 13.5a7.5 7.5 0 0 0 .1-1.5 7.5 7.5 0 0 0-.1-1.5l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 2.5A8 8 0 0 0 7 6L4.6 5l-2 3.5 2 1.5a7.5 7.5 0 0 0-.1 1.5 7.5 7.5 0 0 0 .1 1.5l-2 1.5 2 3.5L7 17a8 8 0 0 0 2.6 1.5L10 21h4l.4-2.5A8 8 0 0 0 17 17l2.4 1 2-3.5-2-1.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" /></svg></span>
+            Settings
+          </button>
+        </nav>
+      </section>
+    </main>
+
+    <dialog id="courseDialog">
+      <form method="dialog" class="dialog-card" id="courseForm">
+        <h2>Add Course</h2>
+        <input id="courseCode" placeholder="Course code เช่น 01132333-65" />
+        <input id="courseName" placeholder="Course name" />
+        <div class="composer-row">
+          <button class="ghost-btn" value="cancel" type="submit">Cancel</button>
+          <button class="primary-btn" value="default" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js?v=11"></script>
+    <script>
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        navigator.serviceWorker.register("sw.js");
+      }
+    </script>
+  </body>
+</html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hermes University Agent</title>
     <meta name="theme-color" content="#ededeb" />
