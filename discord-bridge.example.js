@@ -1,7 +1,8 @@
-import { Client, GatewayIntentBits } from "discord.js";
+const { Client, GatewayIntentBits } = require("discord.js");
 
 const token = process.env.DISCORD_TOKEN;
 const hermesApiUrl = process.env.HERMES_API_URL || "http://127.0.0.1:4181/api/brain-dump";
+const hermesAppKey = process.env.HERMES_APP_KEY || "";
 const allowedChannelId = process.env.DISCORD_CHANNEL_ID || "";
 
 if (!token) {
@@ -40,7 +41,10 @@ client.on("messageCreate", async (message) => {
   try {
     const response = await fetch(hermesApiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-hermes-key": hermesAppKey
+      },
       body: JSON.stringify({
         text: brainDump,
         source: `discord:${message.channelId}`
