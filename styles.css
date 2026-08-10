@@ -413,6 +413,28 @@ h2 {
   background: #dce7ef;
 }
 
+.task-badges {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tag.status-not-started {
+  background: #ededeb;
+  color: var(--muted);
+}
+
+.tag.status-in-progress {
+  background: #dfe9f0;
+  color: var(--blue);
+}
+
+.tag.status-done {
+  background: #dff0e5;
+  color: var(--green);
+}
+
 .task-actions {
   display: flex;
   justify-content: flex-end;
