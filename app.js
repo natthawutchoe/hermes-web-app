@@ -591,14 +591,17 @@ function switchTab(tab) {
   $all("[data-tab]").forEach((button) => button.classList.toggle("is-active", button.dataset.tab === tab));
 }
 
+function selectDate(iso) {
+  if (!iso || state.selectedDateIso === iso) return;
+  state.selectedDateIso = iso;
+  renderAll();
+}
+
 document.addEventListener("click", (event) => {
   const tabButton = event.target.closest("[data-tab]");
   if (tabButton) switchTab(tabButton.dataset.tab);
   const dayButton = event.target.closest("[data-date]");
-  if (dayButton) {
-    state.selectedDateIso = dayButton.dataset.date;
-    renderAll();
-  }
+  if (dayButton) selectDate(dayButton.dataset.date);
   const actionButton = event.target.closest("[data-action]");
   if (actionButton) {
     const task = state.tasks.find((item) => item.id === actionButton.dataset.id);
@@ -607,6 +610,43 @@ document.addEventListener("click", (event) => {
     renderAll();
   }
 });
+
+let dayTouchStart = null;
+
+document.addEventListener(
+  "touchstart",
+  (event) => {
+    const dayButton = event.target.closest("[data-date]");
+    if (!dayButton || !event.changedTouches.length) {
+      dayTouchStart = null;
+      return;
+    }
+    const touch = event.changedTouches[0];
+    dayTouchStart = {
+      date: dayButton.dataset.date,
+      x: touch.clientX,
+      y: touch.clientY
+    };
+  },
+  { passive: true }
+);
+
+document.addEventListener(
+  "touchend",
+  (event) => {
+    const dayButton = event.target.closest("[data-date]");
+    if (!dayButton || !dayTouchStart || !event.changedTouches.length) return;
+    const touch = event.changedTouches[0];
+    const movedX = Math.abs(touch.clientX - dayTouchStart.x);
+    const movedY = Math.abs(touch.clientY - dayTouchStart.y);
+    if (dayTouchStart.date === dayButton.dataset.date && movedX < 12 && movedY < 12) {
+      event.preventDefault();
+      selectDate(dayButton.dataset.date);
+    }
+    dayTouchStart = null;
+  },
+  { passive: false }
+);
 
 $("#brainForm").addEventListener("submit", async (event) => {
   event.preventDefault();
