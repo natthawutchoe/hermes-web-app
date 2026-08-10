@@ -27,6 +27,7 @@ const realClasses = [
 ];
 
 const courseAliases = [
+  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", terms: ["qa", "qadm"] },
   { code: "01132326-65", name: "Organization Development", terms: ["organization development", "org dev", "องค์การ", "พัฒนาองค์การ"] },
   { code: "03521101-67", name: "Sea and Life", terms: ["sea and life", "ทะเล", "ชีวิตกับทะเล"] },
   { code: "01132417-65", name: "Sustainability Management", terms: ["sustainability", "sustainability management", "ความยั่งยืน"] },
@@ -219,12 +220,21 @@ function extractCourse(text) {
   if (kuCode) return kuCode[0];
   const known = state.courses.find((course) => uppercase.includes(course.code) || uppercase.includes(course.name.toUpperCase()));
   if (known) return known.code;
-  const alias = courseAliases.find((item) => item.terms.some((term) => text.toLowerCase().includes(term.toLowerCase())));
+  const alias = courseAliases.find((item) => item.terms.some((term) => termMatches(text, term)));
   if (alias) return alias.code;
   const courseCode = uppercase.match(/\b[A-Z]{2,4}\s?\d{2,4}\b/);
   if (courseCode) return courseCode[0].replace(/\s+/g, "");
   const hint = courseHints.find((prefix) => uppercase.includes(prefix));
   return hint ? `${hint}000` : "GEN000";
+}
+
+function termMatches(text, term) {
+  const lower = text.toLowerCase();
+  const needle = term.toLowerCase();
+  if (/^[a-z0-9]{1,4}$/.test(needle)) {
+    return new RegExp(`(^|[^a-z0-9])${needle}([^a-z0-9]|$)`).test(lower);
+  }
+  return lower.includes(needle);
 }
 
 function ensureCourse(courseCode) {
@@ -342,6 +352,7 @@ function renderClassCard(classItem, showDay = false) {
 function renderTask(task, compact = false) {
   const delta = daysUntil(task.due);
   const dueText = delta < 0 ? `${Math.abs(delta)}d late` : delta === 0 ? "Today" : delta === 1 ? "Tomorrow" : `${delta}d left`;
+  const statusText = task.status === "in-progress" ? "In progress" : task.status === "done" ? "Done" : "Not started";
   return `
     <article class="task-card">
       <div class="task-top">
@@ -354,11 +365,14 @@ function renderTask(task, compact = false) {
             <span>${task.estimate} min</span>
           </div>
         </div>
-        <span class="tag ${task.priority}">${priorityLabel(task.priority)}</span>
+        <div class="task-badges">
+          <span class="tag ${task.priority}">${priorityLabel(task.priority)}</span>
+          <span class="tag status-${escapeHtml(task.status)}">${statusText}</span>
+        </div>
       </div>
       ${compact ? "" : `
         <div class="task-actions">
-          <button data-action="start" data-id="${task.id}" type="button">Start</button>
+          <button data-action="start" data-id="${task.id}" type="button">${task.status === "in-progress" ? "Started" : "Start"}</button>
           <button data-action="done" data-id="${task.id}" type="button">Done</button>
         </div>
       `}
@@ -608,6 +622,7 @@ document.addEventListener("click", (event) => {
     if (!task) return;
     task.status = actionButton.dataset.action === "done" ? "done" : "in-progress";
     renderAll();
+    saveState();
   }
 });
 
