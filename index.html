@@ -258,7 +258,17 @@
       </form>
     </dialog>
 
-    <script src="app.js?v=12"></script>
+    <script>
+      fetch("app.js?v=12")
+        .then((response) => response.text())
+        .then((source) => {
+          const start = source.indexOf("const STORAGE_KEY");
+          const duplicate = source.indexOf("const STORAGE_KEY", start + 1);
+          const script = document.createElement("script");
+          script.textContent = duplicate > 0 ? source.slice(0, duplicate) : source;
+          document.body.appendChild(script);
+        });
+    </script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         navigator.serviceWorker.register("sw.js");
