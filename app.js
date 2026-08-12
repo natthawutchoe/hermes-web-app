@@ -273,20 +273,28 @@ function taskFromBrainDump(text) {
   ensureCourse(courseCode);
   const dueDate = parseDateLoose(text);
   const priority = inferPriority(dueDate, text);
+  const status = /(เสร็จ|done|finished)/i.test(text)
+    ? "done"
+    : /(เริ่ม|started|กำลัง)/i.test(text)
+      ? "in-progress"
+      : "not-started";
   return {
     id: `task-${Date.now()}`,
     courseCode,
     title: extractTitle(text, courseCode),
     due: dueDate.toISOString().slice(0, 10),
-    status: /(เสร็จ|done|finished)/i.test(text)
-      ? "done"
-      : /(เริ่ม|started|กำลัง)/i.test(text)
-        ? "in-progress"
-        : "not-started",
+    status,
+    completedAt: status === "done" ? new Date().toISOString() : null,
     estimate: priority === "high" ? 45 : 35,
     priority,
     source: text
   };
+}
+
+function normalizeTaskCompletion(task) {
+  if (task.status === "done" && !task.completedAt) task.completedAt = new Date().toISOString();
+  if (task.status !== "done" && task.completedAt) task.completedAt = null;
+  return task;
 }
 
 function formatDate(iso) {
@@ -512,10 +520,8 @@ function renderWeeklyClasses() {
 function renderCourses() {
   $("#courseList").innerHTML = state.courses.map((course) => {
     const tasks = state.tasks.filter((task) => task.courseCode === course.code);
-    const done = tasks.filter((task) => task.status === "done").length;
     const active = tasks.filter((task) => task.status !== "done").length;
     const doneThisWeek = tasks.filter(isDoneThisWeek).sort((a, b) => String(b.completedAt || b.due).localeCompare(String(a.completedAt || a.due)));
-    const progress = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
     return `
       <article class="course-card">
         <div class="course-row">
@@ -525,8 +531,7 @@ function renderCourses() {
           </div>
           <span class="tag">${active} active</span>
         </div>
-        <div class="progress"><span style="width: ${progress}%"></span></div>
-        <div class="task-meta">${progress}% cleared · ${doneThisWeek.length} submitted this week</div>
+        <div class="task-meta">${doneThisWeek.length} submitted this week</div>
         <details class="course-done-panel">
           <summary>
             <span>Submitted this week</span>
@@ -630,6 +635,7 @@ function replaceSchedule(schedule) {
 }
 
 function renderAll({ persist = true } = {}) {
+  state.tasks.forEach(normalizeTaskCompletion);
   renderDashboard();
   renderCourses();
   renderCalendar();
@@ -676,6 +682,7 @@ document.addEventListener("click", (event) => {
       task.completedAt = new Date().toISOString();
     } else {
       task.status = "in-progress";
+      task.completedAt = null;
     }
     renderAll();
     saveState();
