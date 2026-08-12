@@ -58,9 +58,9 @@ function briefingFor(tasks) {
   if (!top) return "";
 
   const opener = top.days <= 0
-    ? `วันนี้โฟกัส ${top.courseCode} ก่อน เพราะ${dueText(top.days)}`
-    : `ตอนนี้ควรเริ่มจาก ${top.courseCode} เพราะใกล้สุด (${dueText(top.days)})`;
-  const nextText = next ? ` แล้วค่อยตามด้วย ${next.courseCode} ถ้ายังมีเวลา` : "";
+    ? `เย็นนี้เริ่มจาก ${top.courseCode} ก่อน เพราะ${dueText(top.days)}`
+    : `เย็นนี้ควรเริ่มจาก ${top.courseCode} เพราะใกล้สุด (${dueText(top.days)})`;
+  const nextText = next ? ` แล้วค่อยต่อด้วย ${next.courseCode}` : "";
   return `${opener}${nextText}.`;
 }
 
@@ -95,7 +95,7 @@ async function main() {
   const lines = pending.slice(0, 8).map((task) => {
     return `- ${task.courseCode}: ${task.title} (${dueText(task.days)}, ${task.due})`;
   });
-  await channel.send(`Hermes briefing\n${briefingFor(pending)}\n\nงานใกล้ส่ง:\n${lines.join("\n")}`);
+  await channel.send(`Hermes evening plan\n${briefingFor(pending)}\n\nลำดับที่ควรทำก่อน:\n${lines.join("\n")}`);
 
   for (const task of pending) sent[task.id] = todayKey;
   writeReminderState(sent);
