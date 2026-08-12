@@ -1,4 +1,4 @@
-const { json, methodNotAllowed, readState, requireAuthorized, taskFromText, writeState } = require("./_hermes");
+const { json, methodNotAllowed, processBrainDump, readState, requireAuthorized, writeState } = require("./_hermes");
 
 module.exports = async function handler(req, res) {
   try {
@@ -16,17 +16,11 @@ module.exports = async function handler(req, res) {
     }
 
     const source = String(req.body?.source || "dashboard");
+    const userId = String(req.body?.userId || req.body?.user_id || "unknown");
     const state = await readState();
-    const task = taskFromText(state, text, source);
-    state.tasks.push(task);
-    state.chat.push({ role: "user", text });
-    state.chat.push({
-      role: "hermes",
-      text: `ผมจับจาก ${source} ได้ว่าเป็น ${task.courseCode}: ${task.title} ส่ง ${task.due} และเพิ่มเข้า Dashboard แล้ว`
-    });
-
+    const result = processBrainDump(state, text, source, userId);
     const saved = await writeState(state);
-    json(res, 200, { ok: true, task, state: saved });
+    json(res, 200, { ...result, state: saved });
   } catch (error) {
     json(res, 500, { error: error.message });
   }
