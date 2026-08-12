@@ -43,6 +43,27 @@ function dueText(days) {
   return `อีก ${days} วัน`;
 }
 
+function priorityRank(task) {
+  if (task.days < 0) return 0;
+  if (task.days === 0) return 1;
+  if (task.priority === "high") return 2;
+  if (task.days === 1) return 3;
+  if (task.priority === "medium") return 4;
+  return 5;
+}
+
+function briefingFor(tasks) {
+  const top = tasks[0];
+  const next = tasks[1];
+  if (!top) return "";
+
+  const opener = top.days <= 0
+    ? `วันนี้โฟกัส ${top.courseCode} ก่อน เพราะ${dueText(top.days)}`
+    : `ตอนนี้ควรเริ่มจาก ${top.courseCode} เพราะใกล้สุด (${dueText(top.days)})`;
+  const nextText = next ? ` แล้วค่อยตามด้วย ${next.courseCode} ถ้ายังมีเวลา` : "";
+  return `${opener}${nextText}.`;
+}
+
 async function fetchHermesState() {
   const response = await fetch(apiUrl, {
     headers: { "x-hermes-key": appKey }
@@ -61,7 +82,7 @@ async function main() {
     .filter((task) => task.status !== "done")
     .map((task) => ({ ...task, days: daysUntil(task.due) }))
     .filter((task) => task.days <= remindDays)
-    .sort((a, b) => a.days - b.days);
+    .sort((a, b) => priorityRank(a) - priorityRank(b) || a.days - b.days);
 
   const pending = dueSoon.filter((task) => sent[task.id] !== todayKey);
   if (!pending.length) return;
@@ -74,7 +95,7 @@ async function main() {
   const lines = pending.slice(0, 8).map((task) => {
     return `- ${task.courseCode}: ${task.title} (${dueText(task.days)}, ${task.due})`;
   });
-  await channel.send(`Hermes reminder: งานใกล้ส่ง\n${lines.join("\n")}`);
+  await channel.send(`Hermes briefing\n${briefingFor(pending)}\n\nงานใกล้ส่ง:\n${lines.join("\n")}`);
 
   for (const task of pending) sent[task.id] = todayKey;
   writeReminderState(sent);
