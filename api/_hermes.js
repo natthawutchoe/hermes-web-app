@@ -20,20 +20,25 @@ const defaultState = {
     { id: "class-chinese-fri", day: "Fri", dayIndex: 5, start: "13:00", end: "16:00", courseCode: "01362101-67", title: "Chinese I", room: "17205", section: "801" }
   ],
   tasks: [],
+  pendingClarifications: {},
+  learnedAliases: {},
   chat: [
     { role: "hermes", text: "Inbox พร้อมแล้ว ส่งงานหรือ deadline จาก Discord/Inbox มาได้เลย เดี๋ยวผมแยกเข้าวิชาและ Dashboard ให้" }
   ]
 };
 
 const aliases = [
-  { code: "01132326-65", name: "Organization Development", terms: ["organization development", "org dev", "องค์การ", "พัฒนาองค์การ"] },
-  { code: "03521101-67", name: "Sea and Life", terms: ["sea and life", "ทะเล", "ชีวิตกับทะเล"] },
-  { code: "01132417-65", name: "Sustainability Management", terms: ["sustainability", "sustainability management", "ความยั่งยืน"] },
-  { code: "01132333-65", name: "Business Information Systems", terms: ["bis", "business information systems", "database", "ระบบสารสนเทศ", "ฐานข้อมูล"] },
-  { code: "03754221-67", name: "Basic English Pronunciation", terms: ["english pronunciation", "pronunciation", "อังกฤษ", "การออกเสียง"] },
-  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", terms: ["quantitative", "decision making", "quant", "วิเคราะห์เชิงปริมาณ"] },
-  { code: "01362101-67", name: "Chinese I", terms: ["chinese", "จีน"] }
+  { code: "01132326-65", name: "Organization Development", short: "Org", terms: ["organization development", "org dev", "org", "องค์การ", "พัฒนาองค์การ"] },
+  { code: "03521101-67", name: "Sea and Life", short: "Sea", terms: ["sea and life", "sea", "ทะเล", "ชีวิตกับทะเล"] },
+  { code: "01132417-65", name: "Sustainability Management", short: "Sustain", terms: ["sustainability", "sustainability management", "sustain", "ความยั่งยืน"] },
+  { code: "01132333-65", name: "Business Information Systems", short: "BIS", terms: ["bis", "business information systems", "database", "ระบบ", "ระบบสารสนเทศ", "ฐานข้อมูล"] },
+  { code: "03754221-67", name: "Basic English Pronunciation", short: "English", terms: ["english pronunciation", "pronunciation", "english", "eng", "อิ้ง", "อังกฤษ", "การออกเสียง"] },
+  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", short: "QA", terms: ["qa", "qadm", "quantitative", "decision making", "quant", "คิวเอ", "วิเคราะห์", "วิเคราะห์เชิงปริมาณ", "วิเคราะห์ปริมาณ"] },
+  { code: "01362101-67", name: "Chinese I", short: "Chinese", terms: ["chinese", "จีน", "ภาษาจีน"] }
 ];
+
+const datePattern = /(วันนี้|พรุ่งนี้|มะรืน|today|tomorrow|day after tomorrow|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{1,2}[/-]\d{1,2}\b)/i;
+const fillerPattern = /(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started|วันนี้|พรุ่งนี้|มะรืน|นี้|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|today|tomorrow)/gi;
 
 function supabaseHeaders() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -44,15 +49,27 @@ function supabaseHeaders() {
   };
 }
 
+function supabaseUrl() {
+  return process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
 function assertSupabaseEnv() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+  if (!supabaseUrl()) {
+    throw new Error("Missing SUPABASE_URL. Set SUPABASE_URL in Vercel Environment Variables.");
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY. Set the Supabase service_role key in Vercel Environment Variables.");
   }
 }
 
 function isAuthorized(req) {
-  if (!process.env.HERMES_APP_KEY) return false;
-  return req.headers["x-hermes-key"] === process.env.HERMES_APP_KEY;
+  const requestKey = req.headers["x-hermes-key"];
+  const allowedKeys = [
+    process.env.HERMES_APP_KEY,
+    process.env.HERMES_DASHBOARD_KEY
+  ].filter(Boolean);
+  if (!requestKey || !allowedKeys.length) return false;
+  return allowedKeys.includes(requestKey);
 }
 
 function requireAuthorized(req, res) {
@@ -69,13 +86,15 @@ function normalizeState(state) {
     courses: Array.isArray(state?.courses) ? state.courses : defaultState.courses,
     classes: Array.isArray(state?.classes) ? state.classes : defaultState.classes,
     tasks: Array.isArray(state?.tasks) ? state.tasks : [],
+    pendingClarifications: state?.pendingClarifications && typeof state.pendingClarifications === "object" ? state.pendingClarifications : {},
+    learnedAliases: state?.learnedAliases && typeof state.learnedAliases === "object" ? state.learnedAliases : {},
     chat: Array.isArray(state?.chat) ? state.chat : defaultState.chat
   };
 }
 
 async function readState() {
   assertSupabaseEnv();
-  const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/hermes_state?id=eq.default&select=state`, {
+  const response = await fetch(`${supabaseUrl()}/rest/v1/hermes_state?id=eq.default&select=state`, {
     headers: supabaseHeaders()
   });
   if (!response.ok) throw new Error(`Supabase read failed: ${response.status}`);
@@ -88,7 +107,7 @@ async function readState() {
 async function writeState(state) {
   assertSupabaseEnv();
   const nextState = normalizeState(state);
-  const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/hermes_state`, {
+  const response = await fetch(`${supabaseUrl()}/rest/v1/hermes_state`, {
     method: "POST",
     headers: {
       ...supabaseHeaders(),
@@ -142,20 +161,37 @@ function addDays(date, days) {
   return next;
 }
 
+function hasExplicitDate(text) {
+  return datePattern.test(text);
+}
+
 function extractCourse(state, text) {
   const upper = text.toUpperCase();
   const kuCode = text.match(/\b\d{8}-\d{2}\b/);
   if (kuCode) return kuCode[0];
   const known = state.courses.find((course) => upper.includes(course.code) || upper.includes(course.name.toUpperCase()));
   if (known) return known.code;
-  const alias = aliases.find((item) => item.terms.some((term) => text.toLowerCase().includes(term.toLowerCase())));
+  const learned = Object.entries(state.learnedAliases || {}).find(([term]) => termMatches(text, term));
+  if (learned) return learned[1];
+  const alias = aliases.find((item) => item.terms.some((term) => termMatches(text, term)));
   if (alias) return alias.code;
   const courseCode = upper.match(/\b[A-Z]{2,4}\s?\d{2,4}\b/);
   if (courseCode) return courseCode[0].replace(/\s+/g, "");
   return "GEN000";
 }
 
+function termMatches(text, term) {
+  const lower = text.toLowerCase();
+  const needle = String(term || "").toLowerCase();
+  if (!needle) return false;
+  if (/^[a-z0-9]{1,4}$/.test(needle)) {
+    return new RegExp(`(^|[^a-z0-9])${needle}([^a-z0-9]|$)`).test(lower);
+  }
+  return lower.includes(needle);
+}
+
 function ensureCourse(state, courseCode) {
+  if (courseCode === "GEN000") return;
   if (state.courses.some((course) => course.code === courseCode)) return;
   const alias = aliases.find((item) => item.code === courseCode);
   state.courses.push({
@@ -167,13 +203,25 @@ function ensureCourse(state, courseCode) {
 }
 
 function extractTitle(text, courseCode) {
-  const cleaned = text
-    .replace(courseCode, "")
+  const alias = aliases.find((item) => item.code === courseCode);
+  let cleaned = text.replace(courseCode, "");
+  if (alias) {
+    for (const term of alias.terms) {
+      cleaned = cleaned.replace(new RegExp(escapeRegExp(term), "gi"), " ");
+    }
+  }
+  cleaned = cleaned
     .replace(/(?:วิชา|class|course)\s*[^\s,，:：]+(?:\s+[^\s,，:：]+)?/gi, " ")
-    .replace(/(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started)/gi, " ")
+    .replace(fillerPattern, " ")
+    .replace(/\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/g, " ")
+    .replace(/\b\d{1,2}[/-]\d{1,2}\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned || "Review and organize course task";
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function inferPriority(dueDate, text, state) {
@@ -187,8 +235,8 @@ function inferPriority(dueDate, text, state) {
   return "low";
 }
 
-function taskFromText(state, text, source = "dashboard") {
-  const courseCode = extractCourse(state, text);
+function taskFromText(state, text, source = "dashboard", options = {}) {
+  const courseCode = options.courseCode || extractCourse(state, text);
   ensureCourse(state, courseCode);
   const dueDate = parseDateLoose(text);
   const priority = inferPriority(dueDate, text, state);
@@ -209,6 +257,117 @@ function taskFromText(state, text, source = "dashboard") {
   };
 }
 
+function analyzeTaskText(state, text, source = "dashboard", options = {}) {
+  const task = taskFromText(state, text, source, options);
+  const missing = [];
+  let confidence = 0.35;
+
+  if (task.courseCode === "GEN000") missing.push("course");
+  else confidence += 0.3;
+
+  if (!hasExplicitDate(text)) missing.push("due");
+  else confidence += 0.2;
+
+  if (!task.title || task.title === "Review and organize course task" || task.title.length < 3) missing.push("title");
+  else confidence += 0.15;
+
+  return { task, confidence: Math.min(1, Number(confidence.toFixed(2))), missing };
+}
+
+function pendingKey(source, userId) {
+  return `${source}:${userId || "unknown"}`;
+}
+
+function courseChoices(state) {
+  return state.courses
+    .filter((course) => course.code !== "GEN000")
+    .map((course) => {
+      const alias = aliases.find((item) => item.code === course.code);
+      return alias?.short || course.code;
+    })
+    .join(" / ");
+}
+
+function shortQuestionFor(missing, state) {
+  if (missing.includes("course")) return `งานนี้เป็นวิชาไหน? ตอบ ${courseChoices(state)}`;
+  if (missing.includes("due")) return "งานนี้ส่งวันไหน? ตอบ วันนี้ / พรุ่งนี้ / ศุกร์นี้ / หรือวันที่แบบ 15/8";
+  return "ขอรายละเอียดงานเพิ่มอีกนิด เช่น ชื่องานหรือสิ่งที่ต้องส่ง";
+}
+
+function answerLooksLikeCourse(state, text) {
+  const code = extractCourse(state, text);
+  return code === "GEN000" ? "" : code;
+}
+
+function learnAliasFromClarification(state, originalText, courseCode) {
+  const text = originalText.toLowerCase().trim();
+  const actionIndex = text.search(/ส่ง|ทำ|อ่าน|สอบ|quiz|exam|due|deadline/);
+  if (actionIndex <= 0 || actionIndex > 24) return;
+
+  const candidate = text
+    .slice(0, actionIndex)
+    .replace(/^(วิชา|class|course)\s+/i, "")
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (candidate.length >= 2 && candidate.length <= 16 && extractCourse({ ...state, learnedAliases: {} }, candidate) === "GEN000") {
+    state.learnedAliases[candidate] = courseCode;
+  }
+}
+
+function processBrainDump(state, text, source = "dashboard", userId = "unknown") {
+  const key = pendingKey(source, userId);
+  const pending = state.pendingClarifications?.[key];
+
+  if (pending) {
+    const courseCode = pending.missing.includes("course") ? answerLooksLikeCourse(state, text) : pending.draftTask.courseCode;
+    const extraText = pending.missing.includes("course") && courseCode ? "" : ` ${text}`;
+    if (pending.missing.includes("course") && !courseCode) {
+      return {
+        ok: false,
+        needsClarification: true,
+        question: shortQuestionFor(["course"], state),
+        missing: ["course"]
+      };
+    }
+
+    const mergedText = `${pending.originalText}${extraText}`.trim();
+    const analysis = analyzeTaskText(state, mergedText, source, { courseCode });
+    delete state.pendingClarifications[key];
+    learnAliasFromClarification(state, pending.originalText, analysis.task.courseCode);
+    state.tasks.push(analysis.task);
+    state.chat.push({ role: "user", text });
+    state.chat.push({ role: "hermes", text: `เพิ่มแล้ว: ${analysis.task.courseCode} - ${analysis.task.title} (${analysis.task.due})` });
+    return { ok: true, task: analysis.task, confidence: analysis.confidence, learned: true };
+  }
+
+  const analysis = analyzeTaskText(state, text, source);
+  if (analysis.confidence < 0.65 || analysis.missing.includes("course")) {
+    const question = shortQuestionFor(analysis.missing, state);
+    state.pendingClarifications[key] = {
+      originalText: text,
+      missing: analysis.missing,
+      draftTask: analysis.task,
+      createdAt: new Date().toISOString()
+    };
+    state.chat.push({ role: "user", text });
+    state.chat.push({ role: "hermes", text: question });
+    return {
+      ok: false,
+      needsClarification: true,
+      question,
+      missing: analysis.missing,
+      confidence: analysis.confidence
+    };
+  }
+
+  state.tasks.push(analysis.task);
+  state.chat.push({ role: "user", text });
+  state.chat.push({ role: "hermes", text: `เพิ่มแล้ว: ${analysis.task.courseCode} - ${analysis.task.title} (${analysis.task.due})` });
+  return { ok: true, task: analysis.task, confidence: analysis.confidence };
+}
+
 function json(res, status, payload) {
   res.statusCode = status;
   res.setHeader("content-type", "application/json; charset=utf-8");
@@ -224,6 +383,7 @@ module.exports = {
   json,
   methodNotAllowed,
   normalizeState,
+  processBrainDump,
   requireAuthorized,
   readState,
   taskFromText,
