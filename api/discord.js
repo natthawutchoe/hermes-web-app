@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { json, readState, taskFromText, writeState } = require("./_hermes");
+const { json, processBrainDump, readState, writeState } = require("./_hermes");
 
 const DISCORD_RESPONSE = {
   PONG: 1,
@@ -24,9 +24,7 @@ async function readRawBody(req) {
   if (typeof req.rawBody === "string") return Buffer.from(req.rawBody, "utf8");
   if (Buffer.isBuffer(req.body)) return req.body;
   if (typeof req.body === "string") return Buffer.from(req.body, "utf8");
-  if (req.body && typeof req.body === "object") {
-    return Buffer.from(JSON.stringify(req.body), "utf8");
-  }
+  if (req.body && typeof req.body === "object") return Buffer.from(JSON.stringify(req.body), "utf8");
 
   const chunks = [];
   for await (const chunk of req) {
@@ -94,7 +92,7 @@ module.exports = async function handler(req, res) {
       discordJson(res, {
         type: DISCORD_RESPONSE.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: "พิมพ์งานหลัง /hermes ด้วยนะ เช่น /hermes text: FIN301 ส่ง slide วันพุธหน้า",
+          content: "พิมพ์งานหลัง /hermes ด้วยนะ เช่น /hermes text: QA ส่ง slide พรุ่งนี้",
           flags: DISCORD_FLAGS.EPHEMERAL
         }
       });
@@ -104,20 +102,13 @@ module.exports = async function handler(req, res) {
     const channelId = interaction.channel_id || "unknown";
     const userId = interaction.member?.user?.id || interaction.user?.id || "unknown";
     const state = await readState();
-    const task = taskFromText(state, text, `discord-slash:${channelId}:${userId}`);
-    state.tasks.push(task);
-    state.chat.push({ role: "user", text });
-    state.chat.push({
-      role: "hermes",
-      text: `รับจาก Discord แล้ว: ${task.courseCode} - ${task.title} ส่ง ${task.due}`
-    });
-
+    const result = processBrainDump(state, text, `discord-slash:${channelId}`, userId);
     await writeState(state);
 
     discordJson(res, {
       type: DISCORD_RESPONSE.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: shortTaskReply(task),
+        content: result.needsClarification ? result.question : shortTaskReply(result.task),
         flags: DISCORD_FLAGS.EPHEMERAL
       }
     });
