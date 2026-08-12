@@ -240,16 +240,18 @@ function taskFromText(state, text, source = "dashboard", options = {}) {
   ensureCourse(state, courseCode);
   const dueDate = parseDateLoose(text);
   const priority = inferPriority(dueDate, text, state);
+  const status = /(เสร็จ|done|finished)/i.test(text)
+    ? "done"
+    : /(เริ่ม|started|กำลัง)/i.test(text)
+      ? "in-progress"
+      : "not-started";
   return {
     id: `task-${Date.now()}`,
     courseCode,
     title: extractTitle(text, courseCode),
     due: dueDate.toISOString().slice(0, 10),
-    status: /(เสร็จ|done|finished)/i.test(text)
-      ? "done"
-      : /(เริ่ม|started|กำลัง)/i.test(text)
-        ? "in-progress"
-        : "not-started",
+    status,
+    completedAt: status === "done" ? new Date().toISOString() : null,
     estimate: priority === "high" ? 45 : 35,
     priority,
     source,
