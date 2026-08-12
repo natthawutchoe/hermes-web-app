@@ -41,7 +41,7 @@ const courseAliases = [
 ];
 
 const defaultState = {
-  settings: { hourTarget: 3, riskWindow: 3 },
+  settings: { riskWindow: 3 },
   weekOffset: 0,
   selectedDateIso: null,
   courses: structuredClone(realCourses),
@@ -309,6 +309,26 @@ function tasksForDate(iso) {
   return sortedOpenTasks().filter((task) => task.due === iso);
 }
 
+function currentWeekRange() {
+  const base = new Date();
+  base.setDate(base.getDate() + state.weekOffset * 7);
+  const start = new Date(base);
+  start.setDate(base.getDate() - base.getDay());
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function isDoneThisWeek(task) {
+  if (task.status !== "done") return false;
+  const { start, end } = currentWeekRange();
+  const stamp = task.completedAt || task.due;
+  const date = stamp.includes("T") ? new Date(stamp) : dateFromIso(stamp);
+  return date >= start && date <= end;
+}
+
 function dateFromIso(iso) {
   return new Date(`${iso}T12:00:00`);
 }
@@ -380,16 +400,34 @@ function renderTask(task, compact = false) {
   `;
 }
 
+function renderDoneTaskRow(task) {
+  const doneDate = task.completedAt
+    ? new Date(task.completedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+    : formatDate(task.due);
+  return `
+    <div class="done-task-row">
+      <div>
+        <p class="task-title">${escapeHtml(task.title)}</p>
+        <div class="task-meta">
+          <span>${doneDate}</span>
+          <span>Due ${formatDate(task.due)}</span>
+        </div>
+      </div>
+      <button class="plain-btn danger" data-action="delete-task" data-id="${task.id}" type="button" title="Delete submitted task" aria-label="Delete submitted task">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21a2 2 0 0 1-2-2V7h14v12a2 2 0 0 1-2 2H7ZM8 4V2h8v2h5v2H3V4h5Zm1 5v9h2V9H9Zm4 0v9h2V9h-2Z" /></svg>
+      </button>
+    </div>
+  `;
+}
+
 function renderDashboard() {
   const open = sortedOpenTasks();
   const dueSoon = open.filter((task) => daysUntil(task.due) <= 3);
   const highRisk = open.filter((task) => task.priority === "high");
   const todayPlan = open.slice(0, 3);
-  const plannedMinutes = todayPlan.reduce((sum, task) => sum + Number(task.estimate || 0), 0);
 
   $("#metricDue").textContent = dueSoon.length;
   $("#metricRisk").textContent = highRisk.length;
-  $("#metricHours").textContent = `${(plannedMinutes / 60).toFixed(1)}h`;
   $("#metricCourses").textContent = state.courses.length;
   $("#metricDueText").textContent = dueSoon.length ? "Due in 3 days" : "No pressure today";
 
@@ -475,6 +513,8 @@ function renderCourses() {
   $("#courseList").innerHTML = state.courses.map((course) => {
     const tasks = state.tasks.filter((task) => task.courseCode === course.code);
     const done = tasks.filter((task) => task.status === "done").length;
+    const active = tasks.filter((task) => task.status !== "done").length;
+    const doneThisWeek = tasks.filter(isDoneThisWeek).sort((a, b) => String(b.completedAt || b.due).localeCompare(String(a.completedAt || a.due)));
     const progress = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
     return `
       <article class="course-card">
@@ -483,10 +523,19 @@ function renderCourses() {
             <p class="task-title">${escapeHtml(course.code)}</p>
             <div class="task-meta">${escapeHtml(course.name)}</div>
           </div>
-          <span class="tag">${tasks.length} tasks</span>
+          <span class="tag">${active} active</span>
         </div>
         <div class="progress"><span style="width: ${progress}%"></span></div>
-        <div class="task-meta">${progress}% cleared</div>
+        <div class="task-meta">${progress}% cleared · ${doneThisWeek.length} submitted this week</div>
+        <details class="course-done-panel">
+          <summary>
+            <span>Submitted this week</span>
+            <span>${doneThisWeek.length}</span>
+          </summary>
+          <div class="done-task-list">
+            ${doneThisWeek.length ? doneThisWeek.map(renderDoneTaskRow).join("") : `<div class="empty-state">No submitted tasks this week.</div>`}
+          </div>
+        </details>
       </article>
     `;
   }).join("");
@@ -515,7 +564,6 @@ function renderChat() {
 }
 
 function renderSettings() {
-  $("#hourTarget").value = state.settings.hourTarget;
   $("#riskWindow").value = state.settings.riskWindow;
   $("#appKeyInput").value = getAppKey();
 }
@@ -620,7 +668,15 @@ document.addEventListener("click", (event) => {
   if (actionButton) {
     const task = state.tasks.find((item) => item.id === actionButton.dataset.id);
     if (!task) return;
-    task.status = actionButton.dataset.action === "done" ? "done" : "in-progress";
+    if (actionButton.dataset.action === "delete-task") {
+      if (!window.confirm("Delete this submitted task?")) return;
+      state.tasks = state.tasks.filter((item) => item.id !== actionButton.dataset.id);
+    } else if (actionButton.dataset.action === "done") {
+      task.status = "done";
+      task.completedAt = new Date().toISOString();
+    } else {
+      task.status = "in-progress";
+    }
     renderAll();
     saveState();
   }
@@ -714,11 +770,6 @@ $("#courseForm").addEventListener("submit", (event) => {
   $("#courseCode").value = "";
   $("#courseName").value = "";
   $("#courseDialog").close();
-  renderAll();
-});
-
-$("#hourTarget").addEventListener("change", (event) => {
-  state.settings.hourTarget = Number(event.target.value);
   renderAll();
 });
 
