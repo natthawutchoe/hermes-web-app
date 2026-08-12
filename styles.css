@@ -624,6 +624,63 @@ select:focus {
   background: var(--dark);
 }
 
+.course-done-panel {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.course-done-panel summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.course-done-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.course-done-panel summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--muted);
+  transition: transform 140ms ease;
+}
+
+.course-done-panel[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.done-task-list {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.done-task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.plain-btn.danger {
+  color: var(--red);
+}
+
 .timeline-item {
   border-left: 4px solid #777777;
 }
