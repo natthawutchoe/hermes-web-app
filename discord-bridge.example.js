@@ -29,10 +29,13 @@ client.on("messageCreate", async (message) => {
   const text = message.content.trim();
   if (!text) return;
 
+  const isShortClarification =
+    /^(qa|qadm|bis|chinese|english|sea|sustain|org|คิวเอ|จีน|อิ้ง|ระบบ|ทะเล)$/i.test(text);
   const shouldCapture =
     text.toLowerCase().startsWith("hermes ") ||
     text.toLowerCase().startsWith("/hermes ") ||
-    message.channel.type === 1;
+    message.channel.type === 1 ||
+    (allowedChannelId && message.channelId === allowedChannelId && isShortClarification);
 
   if (!shouldCapture) return;
 
@@ -47,7 +50,8 @@ client.on("messageCreate", async (message) => {
       },
       body: JSON.stringify({
         text: brainDump,
-        source: `discord:${message.channelId}`
+        source: `discord:${message.channelId}`,
+        userId: message.author.id
       })
     });
 
@@ -56,6 +60,11 @@ client.on("messageCreate", async (message) => {
     }
 
     const payload = await response.json();
+    if (payload.needsClarification) {
+      await message.reply(payload.question || "ขอรายละเอียดเพิ่มอีกนิด");
+      return;
+    }
+
     await message.reply(`Added to Hermes: ${payload.task.courseCode} - ${payload.task.title} (${payload.task.due})`);
   } catch (error) {
     console.error(error);
