@@ -6,7 +6,7 @@
     <title>Hermes University Agent</title>
     <meta name="theme-color" content="#ededeb" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=14" />
+    <link rel="stylesheet" href="styles.css?v=15" />
   </head>
   <body>
     <main class="shell">
@@ -67,14 +67,9 @@
               <span>Need attention</span>
             </article>
             <article class="metric">
-              <p>Study Hours</p>
-              <strong id="metricHours">0h</strong>
-              <span>Planned today</span>
-            </article>
-            <article class="metric">
               <p>Courses</p>
               <strong id="metricCourses">0</strong>
-              <span>Active this week</span>
+              <span>Current term</span>
             </article>
           </div>
 
@@ -188,10 +183,6 @@
               </div>
             </div>
             <label class="setting-row">
-              <span>Daily plan target</span>
-              <input id="hourTarget" type="number" min="1" max="10" step="0.5" />
-            </label>
-            <label class="setting-row">
               <span>Risk window</span>
               <select id="riskWindow">
                 <option value="2">2 days</option>
@@ -259,7 +250,7 @@
     </dialog>
 
     <script>
-      fetch(`app.js?v=14&runtime=${Date.now()}`)
+      fetch(`app.js?v=15&runtime=${Date.now()}`)
         .then((response) => response.text())
         .then((source) => {
           const start = source.indexOf("const STORAGE_KEY");
