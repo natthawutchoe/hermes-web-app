@@ -51,12 +51,12 @@ sv up crond >/dev/null 2>&1 || true
 TMP_CRON="$(mktemp)"
 crontab -l 2>/dev/null | grep -v "hermes-reminder.js" > "$TMP_CRON" || true
 cat >> "$TMP_CRON" <<EOF
-0 8,18 * * * . "$ENV_FILE"; cd "$APP_DIR"; node "$REMINDER" >> "$HOME/.local/state/hermes/reminder.log" 2>&1
+0 18 * * * . "$ENV_FILE"; cd "$APP_DIR"; node "$REMINDER" >> "$HOME/.local/state/hermes/reminder.log" 2>&1
 EOF
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
 
 echo "Hermes reminders installed."
-echo "They run every day at 08:00 and 18:00."
+echo "They run every day at 18:00."
 echo "Test now:"
 echo ". \"$ENV_FILE\"; cd \"$APP_DIR\"; node \"$REMINDER\""
