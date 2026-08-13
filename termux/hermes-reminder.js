@@ -7,6 +7,7 @@ const channelId = process.env.DISCORD_CHANNEL_ID;
 const apiUrl = process.env.HERMES_STATE_URL || "https://hermes-web-app-gilt.vercel.app/api/state";
 const appKey = process.env.HERMES_APP_KEY || "";
 const remindDays = Number(process.env.HERMES_REMIND_DAYS || 3);
+const forceSend = process.argv.includes("--force") || process.env.HERMES_REMINDER_FORCE === "1";
 const statePath = process.env.HERMES_REMINDER_STATE || path.join(process.env.HOME || ".", ".config", "hermes", "reminder-state.json");
 const TIME_ZONE = "Asia/Bangkok";
 const DEFAULT_DUE_TIME = "23:59";
@@ -107,8 +108,15 @@ async function main() {
     .filter((task) => task.days <= remindDays)
     .sort((a, b) => priorityRank(a) - priorityRank(b) || a.days - b.days);
 
-  const pending = dueSoon.filter((task) => sent[task.id] !== todayKey);
-  if (!pending.length) return;
+  const pending = forceSend ? dueSoon : dueSoon.filter((task) => sent[task.id] !== todayKey);
+  if (!dueSoon.length) {
+    console.log(`Hermes reminder: no open tasks due within ${remindDays} days. Open tasks: ${tasks.filter((task) => task.status !== "done").length}.`);
+    return;
+  }
+  if (!pending.length) {
+    console.log(`Hermes reminder: ${dueSoon.length} due-soon task(s), but all were already reminded today. Use --force to test-send again.`);
+    return;
+  }
 
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
   await client.login(token);
@@ -119,9 +127,12 @@ async function main() {
     return `- ${courseLabel(task)}: ${task.title} (${dueText(task.days)}, ${taskDue(task)})`;
   });
   await channel.send(`Hermes evening plan\n${briefingFor(pending)}\n\nลำดับที่ควรทำก่อน:\n${lines.join("\n")}`);
+  console.log(`Hermes reminder: sent ${pending.length} task(s) to Discord channel ${channelId}.`);
 
-  for (const task of pending) sent[task.id] = todayKey;
-  writeReminderState(sent);
+  if (!forceSend) {
+    for (const task of pending) sent[task.id] = todayKey;
+    writeReminderState(sent);
+  }
   await client.destroy();
 }
 
