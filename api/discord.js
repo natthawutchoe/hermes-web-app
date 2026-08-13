@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { json, processBrainDump, readState, writeState } = require("./_hermes");
+const { formatTaskSummary, json, processBrainDump, readState, writeState } = require("./_hermes");
 
 const DISCORD_RESPONSE = {
   PONG: 1,
@@ -64,8 +64,8 @@ function optionValue(interaction, name) {
   return options.find((option) => option.name === name)?.value;
 }
 
-function shortTaskReply(task) {
-  return `Saved to Hermes: ${task.courseCode} - ${task.title} (${task.due})`;
+function shortTaskReply(state, task) {
+  return `Saved to Hermes: ${formatTaskSummary(state, task)}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -108,7 +108,7 @@ module.exports = async function handler(req, res) {
     discordJson(res, {
       type: DISCORD_RESPONSE.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: result.needsClarification ? result.question : shortTaskReply(result.task),
+        content: result.needsClarification ? result.question : shortTaskReply(state, result.task),
         flags: DISCORD_FLAGS.EPHEMERAL
       }
     });
