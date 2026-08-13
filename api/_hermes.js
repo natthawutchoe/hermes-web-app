@@ -41,6 +41,7 @@ const aliases = [
 ];
 
 const datePattern = /(วันนี้|พรุ่งนี้|มะรืน|today|tomorrow|day after tomorrow|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{1,2}[/-]\d{1,2}\b)/i;
+const contextualDayPattern = /(?:\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48|\u0e27\u0e31\u0e19\s*\u0e17\u0e35\u0e48|\u0e2a\u0e48\u0e07|date|day|due|deadline)\s*\d{1,2}\b/i;
 const fillerPattern = /(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started|วันนี้|พรุ่งนี้|มะรืน|นี้|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next|morning|noon|afternoon|evening|tonight|เช้า|เที่ยง|บ่าย|เย็น|คืนนี้)/gi;
 
 function supabaseHeaders() {
@@ -133,6 +134,9 @@ function parseDateLoose(text) {
   if (/(พรุ่งนี้|tomorrow)/i.test(text)) return addDays(now, 1);
   if (/(มะรืน|day after tomorrow)/i.test(text)) return addDays(now, 2);
 
+  const dayOfMonth = parseDayOfMonthLoose(text, now);
+  if (dayOfMonth) return dayOfMonth;
+
   const dayMap = [
     ["จันทร์", 1], ["monday", 1],
     ["อังคาร", 2], ["tuesday", 2],
@@ -161,6 +165,22 @@ function parseDateLoose(text) {
   const shortDate = text.match(/\b(\d{1,2})[/-](\d{1,2})\b/);
   if (shortDate) return new Date(now.getFullYear(), Number(shortDate[2]) - 1, Number(shortDate[1]), 12);
   return addDays(now, 3);
+}
+
+function parseDayOfMonthLoose(text, now) {
+  const match = text.match(/(?:\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48|\u0e27\u0e31\u0e19\s*\u0e17\u0e35\u0e48|\u0e2a\u0e48\u0e07|date|day|due|deadline)\s*(\d{1,2})(?!\s*[:./-])/i);
+  if (!match) return null;
+  const day = Number(match[1]);
+  if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+  let candidate = new Date(now.getFullYear(), now.getMonth(), day, 12);
+  if (candidate.getMonth() !== now.getMonth() || candidate.getDate() !== day) return null;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  if (candidate < today) {
+    candidate = new Date(now.getFullYear(), now.getMonth() + 1, day, 12);
+    if (candidate.getDate() !== day) return null;
+  }
+  return candidate;
 }
 
 function nowInBangkok() {
@@ -192,7 +212,7 @@ function addDays(date, days) {
 }
 
 function hasExplicitDate(text) {
-  return datePattern.test(text);
+  return datePattern.test(text) || contextualDayPattern.test(text);
 }
 
 function extractCourse(state, text) {
