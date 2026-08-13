@@ -1,3 +1,6 @@
+const TIME_ZONE = "Asia/Bangkok";
+const DEFAULT_DUE_TIME = "23:59";
+
 const defaultState = {
   settings: { hourTarget: 3, riskWindow: 3 },
   weekOffset: 0,
@@ -28,17 +31,17 @@ const defaultState = {
 };
 
 const aliases = [
-  { code: "01132326-65", name: "Organization Development", short: "Org", terms: ["organization development", "org dev", "org", "องค์การ", "พัฒนาองค์การ"] },
-  { code: "03521101-67", name: "Sea and Life", short: "Sea", terms: ["sea and life", "sea", "ทะเล", "ชีวิตกับทะเล"] },
+  { code: "01132326-65", name: "Organization Development", short: "OD", terms: ["od", "organization development", "organized development", "org dev", "org", "องค์การ", "พัฒนาองค์การ"] },
+  { code: "03521101-67", name: "Sea and Life", short: "C", terms: ["c", "sea", "sea and life", "ทะเล", "ชีวิตกับทะเล"] },
   { code: "01132417-65", name: "Sustainability Management", short: "Sustain", terms: ["sustainability", "sustainability management", "sustain", "ความยั่งยืน"] },
   { code: "01132333-65", name: "Business Information Systems", short: "BIS", terms: ["bis", "business information systems", "database", "ระบบ", "ระบบสารสนเทศ", "ฐานข้อมูล"] },
-  { code: "03754221-67", name: "Basic English Pronunciation", short: "English", terms: ["english pronunciation", "pronunciation", "english", "eng", "อิ้ง", "อังกฤษ", "การออกเสียง"] },
+  { code: "03754221-67", name: "Basic English Pronunciation", short: "Eng", terms: ["english pronunciation", "pronunciation", "english", "eng", "อิ้ง", "อังกฤษ", "การออกเสียง"] },
   { code: "01132332-65", name: "Quantitative Analysis for Decision Making", short: "QA", terms: ["qa", "qadm", "quantitative", "decision making", "quant", "คิวเอ", "วิเคราะห์", "วิเคราะห์เชิงปริมาณ", "วิเคราะห์ปริมาณ"] },
   { code: "01362101-67", name: "Chinese I", short: "Chinese", terms: ["chinese", "จีน", "ภาษาจีน"] }
 ];
 
 const datePattern = /(วันนี้|พรุ่งนี้|มะรืน|today|tomorrow|day after tomorrow|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{1,2}[/-]\d{1,2}\b)/i;
-const fillerPattern = /(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started|วันนี้|พรุ่งนี้|มะรืน|นี้|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|today|tomorrow)/gi;
+const fillerPattern = /(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started|วันนี้|พรุ่งนี้|มะรืน|นี้|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next|morning|noon|afternoon|evening|tonight|เช้า|เที่ยง|บ่าย|เย็น|คืนนี้)/gi;
 
 function supabaseHeaders() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -85,7 +88,7 @@ function normalizeState(state) {
     settings: { ...defaultState.settings, ...(state?.settings || {}) },
     courses: Array.isArray(state?.courses) ? state.courses : defaultState.courses,
     classes: Array.isArray(state?.classes) ? state.classes : defaultState.classes,
-    tasks: Array.isArray(state?.tasks) ? state.tasks : [],
+    tasks: Array.isArray(state?.tasks) ? state.tasks.map((task) => ({ dueTime: DEFAULT_DUE_TIME, ...task })) : [],
     pendingClarifications: state?.pendingClarifications && typeof state.pendingClarifications === "object" ? state.pendingClarifications : {},
     learnedAliases: state?.learnedAliases && typeof state.learnedAliases === "object" ? state.learnedAliases : {},
     chat: Array.isArray(state?.chat) ? state.chat : defaultState.chat
@@ -124,7 +127,7 @@ async function writeState(state) {
 }
 
 function parseDateLoose(text) {
-  const now = new Date();
+  const now = nowInBangkok();
   now.setHours(12, 0, 0, 0);
   if (/(วันนี้|today)/i.test(text)) return now;
   if (/(พรุ่งนี้|tomorrow)/i.test(text)) return addDays(now, 1);
@@ -143,7 +146,12 @@ function parseDateLoose(text) {
   for (const [label, day] of dayMap) {
     if (lower.includes(label)) {
       let diff = day - now.getDay();
-      if (diff <= 0) diff += 7;
+      if (/(next|หน้า)/i.test(lower)) {
+        if (diff <= 0) diff += 7;
+        else diff += 7;
+      } else if (diff < 0) {
+        diff += 7;
+      }
       return addDays(now, diff);
     }
   }
@@ -153,6 +161,28 @@ function parseDateLoose(text) {
   const shortDate = text.match(/\b(\d{1,2})[/-](\d{1,2})\b/);
   if (shortDate) return new Date(now.getFullYear(), Number(shortDate[2]) - 1, Number(shortDate[1]), 12);
   return addDays(now, 3);
+}
+
+function nowInBangkok() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: TIME_ZONE }));
+}
+
+function parseTimeLoose(text) {
+  const explicit = text.match(/\b([01]?\d|2[0-3])[:.](\d{2})\b/);
+  if (explicit) return `${explicit[1].padStart(2, "0")}:${explicit[2]}`;
+  if (/(morning|เช้า)/i.test(text)) return "09:00";
+  if (/(noon|เที่ยง)/i.test(text)) return "12:00";
+  if (/(afternoon|บ่าย)/i.test(text)) return "15:00";
+  if (/(evening|เย็น)/i.test(text)) return "18:00";
+  if (/(tonight|คืนนี้)/i.test(text)) return "21:00";
+  return DEFAULT_DUE_TIME;
+}
+
+function isoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(date, days) {
@@ -202,22 +232,55 @@ function ensureCourse(state, courseCode) {
   });
 }
 
+function aliasFor(code) {
+  return aliases.find((item) => item.code === code);
+}
+
+function courseForCode(state, code) {
+  return state.courses.find((course) => course.code === code);
+}
+
+function courseShort(state, code) {
+  return aliasFor(code)?.short || courseForCode(state, code)?.short || code;
+}
+
+function formatDate(iso) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: TIME_ZONE });
+}
+
+function formatTaskDue(task) {
+  return `${formatDate(task.due)} ${task.dueTime || DEFAULT_DUE_TIME}`;
+}
+
+function formatTaskSummary(state, task) {
+  return `${courseShort(state, task.courseCode)} - ${task.title} ส่ง ${formatTaskDue(task)}`;
+}
+
 function extractTitle(text, courseCode) {
   const alias = aliases.find((item) => item.code === courseCode);
   let cleaned = text.replace(courseCode, "");
   if (alias) {
     for (const term of alias.terms) {
-      cleaned = cleaned.replace(new RegExp(escapeRegExp(term), "gi"), " ");
+      cleaned = cleaned.replace(termReplacePattern(term), " ");
     }
   }
   cleaned = cleaned
     .replace(/(?:วิชา|class|course)\s*[^\s,，:：]+(?:\s+[^\s,，:：]+)?/gi, " ")
     .replace(fillerPattern, " ")
     .replace(/\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/g, " ")
+    .replace(/\b([01]?\d|2[0-3])[:.]\d{2}\b/g, " ")
     .replace(/\b\d{1,2}[/-]\d{1,2}\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned || "Review and organize course task";
+}
+
+function termReplacePattern(term) {
+  const escaped = escapeRegExp(term);
+  if (/^[a-z0-9]{1,4}$/i.test(term)) {
+    return new RegExp(`(^|[^a-z0-9])${escaped}(?=[^a-z0-9]|$)`, "gi");
+  }
+  return new RegExp(escaped, "gi");
 }
 
 function escapeRegExp(value) {
@@ -225,7 +288,7 @@ function escapeRegExp(value) {
 }
 
 function inferPriority(dueDate, text, state) {
-  const today = new Date();
+  const today = nowInBangkok();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
@@ -249,7 +312,8 @@ function taskFromText(state, text, source = "dashboard", options = {}) {
     id: `task-${Date.now()}`,
     courseCode,
     title: extractTitle(text, courseCode),
-    due: dueDate.toISOString().slice(0, 10),
+    due: isoDate(dueDate),
+    dueTime: parseTimeLoose(text),
     status,
     completedAt: status === "done" ? new Date().toISOString() : null,
     estimate: priority === "high" ? 45 : 35,
@@ -340,8 +404,9 @@ function processBrainDump(state, text, source = "dashboard", userId = "unknown")
     learnAliasFromClarification(state, pending.originalText, analysis.task.courseCode);
     state.tasks.push(analysis.task);
     state.chat.push({ role: "user", text });
-    state.chat.push({ role: "hermes", text: `เพิ่มแล้ว: ${analysis.task.courseCode} - ${analysis.task.title} (${analysis.task.due})` });
-    return { ok: true, task: analysis.task, confidence: analysis.confidence, learned: true };
+    const reply = `เพิ่มแล้ว: ${formatTaskSummary(state, analysis.task)}`;
+    state.chat.push({ role: "hermes", text: reply });
+    return { ok: true, task: analysis.task, confidence: analysis.confidence, learned: true, reply };
   }
 
   const analysis = analyzeTaskText(state, text, source);
@@ -366,8 +431,9 @@ function processBrainDump(state, text, source = "dashboard", userId = "unknown")
 
   state.tasks.push(analysis.task);
   state.chat.push({ role: "user", text });
-  state.chat.push({ role: "hermes", text: `เพิ่มแล้ว: ${analysis.task.courseCode} - ${analysis.task.title} (${analysis.task.due})` });
-  return { ok: true, task: analysis.task, confidence: analysis.confidence };
+  const reply = `เพิ่มแล้ว: ${formatTaskSummary(state, analysis.task)}`;
+  state.chat.push({ role: "hermes", text: reply });
+  return { ok: true, task: analysis.task, confidence: analysis.confidence, reply };
 }
 
 function json(res, status, payload) {
@@ -388,6 +454,7 @@ module.exports = {
   processBrainDump,
   requireAuthorized,
   readState,
+  formatTaskSummary,
   taskFromText,
   writeState
 };
