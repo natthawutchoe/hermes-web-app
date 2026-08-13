@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
+﻿const { Client, GatewayIntentBits } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -8,6 +8,18 @@ const apiUrl = process.env.HERMES_STATE_URL || "https://hermes-web-app-gilt.verc
 const appKey = process.env.HERMES_APP_KEY || "";
 const remindDays = Number(process.env.HERMES_REMIND_DAYS || 3);
 const statePath = process.env.HERMES_REMINDER_STATE || path.join(process.env.HOME || ".", ".config", "hermes", "reminder-state.json");
+const TIME_ZONE = "Asia/Bangkok";
+const DEFAULT_DUE_TIME = "23:59";
+
+const courseShorts = {
+  "01132326-65": "OD",
+  "03521101-67": "C",
+  "01132417-65": "Sustain",
+  "01132333-65": "BIS",
+  "03754221-67": "Eng",
+  "01132332-65": "QA",
+  "01362101-67": "Chinese"
+};
 
 if (!token) throw new Error("Missing DISCORD_TOKEN.");
 if (!channelId) throw new Error("Missing DISCORD_CHANNEL_ID. Set it to the Discord channel Hermes should remind you in.");
@@ -19,8 +31,12 @@ function startOfDay(date) {
   return copy;
 }
 
+function nowInBangkok() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: TIME_ZONE }));
+}
+
 function daysUntil(iso) {
-  return Math.ceil((startOfDay(new Date(`${iso}T12:00:00`)) - startOfDay(new Date())) / 86400000);
+  return Math.ceil((startOfDay(new Date(`${iso}T12:00:00`)) - startOfDay(nowInBangkok())) / 86400000);
 }
 
 function readReminderState() {
@@ -52,15 +68,22 @@ function priorityRank(task) {
   return 5;
 }
 
+function courseLabel(task) {
+  return courseShorts[task.courseCode] || task.courseCode;
+}
+
+function taskDue(task) {
+  return `${task.due} ${task.dueTime || DEFAULT_DUE_TIME}`;
+}
 function briefingFor(tasks) {
   const top = tasks[0];
   const next = tasks[1];
   if (!top) return "";
 
   const opener = top.days <= 0
-    ? `เย็นนี้เริ่มจาก ${top.courseCode} ก่อน เพราะ${dueText(top.days)}`
-    : `เย็นนี้ควรเริ่มจาก ${top.courseCode} เพราะใกล้สุด (${dueText(top.days)})`;
-  const nextText = next ? ` แล้วค่อยต่อด้วย ${next.courseCode}` : "";
+    ? `เย็นนี้เริ่มจาก ${courseLabel(top)} ก่อน เพราะ${dueText(top.days)}`
+    : `เย็นนี้ควรเริ่มจาก ${courseLabel(top)} เพราะใกล้สุด (${dueText(top.days)})`;
+  const nextText = next ? ` แล้วค่อยต่อด้วย ${courseLabel(next)}` : "";
   return `${opener}${nextText}.`;
 }
 
@@ -75,7 +98,7 @@ async function fetchHermesState() {
 async function main() {
   const hermes = await fetchHermesState();
   const tasks = Array.isArray(hermes.tasks) ? hermes.tasks : [];
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = nowInBangkok().toISOString().slice(0, 10);
   const sent = readReminderState();
 
   const dueSoon = tasks
@@ -93,7 +116,7 @@ async function main() {
   if (!channel?.send) throw new Error(`Cannot send to channel ${channelId}.`);
 
   const lines = pending.slice(0, 8).map((task) => {
-    return `- ${task.courseCode}: ${task.title} (${dueText(task.days)}, ${task.due})`;
+    return `- ${courseLabel(task)}: ${task.title} (${dueText(task.days)}, ${taskDue(task)})`;
   });
   await channel.send(`Hermes evening plan\n${briefingFor(pending)}\n\nลำดับที่ควรทำก่อน:\n${lines.join("\n")}`);
 
@@ -106,3 +129,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
