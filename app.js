@@ -1,7 +1,9 @@
-const STORAGE_KEY = "hermes-university-agent-v1";
+﻿const STORAGE_KEY = "hermes-university-agent-v1";
 const APP_KEY_STORAGE_KEY = "hermes-app-key";
 const API_STATE_URL = "/api/state";
 const API_BRAIN_DUMP_URL = "/api/brain-dump";
+const TIME_ZONE = "Asia/Bangkok";
+const DEFAULT_DUE_TIME = "23:59";
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const courseHints = ["FIN", "MKT", "BIS", "ACC", "BUS", "ENG", "ECO", "MAT", "STA", "IS"];
@@ -27,14 +29,13 @@ const realClasses = [
 ];
 
 const courseAliases = [
-  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", terms: ["qa", "qadm"] },
-  { code: "01132326-65", name: "Organization Development", terms: ["organization development", "org dev", "องค์การ", "พัฒนาองค์การ"] },
-  { code: "03521101-67", name: "Sea and Life", terms: ["sea and life", "ทะเล", "ชีวิตกับทะเล"] },
-  { code: "01132417-65", name: "Sustainability Management", terms: ["sustainability", "sustainability management", "ความยั่งยืน"] },
-  { code: "01132333-65", name: "Business Information Systems", terms: ["bis", "business information systems", "database", "ระบบสารสนเทศ", "ฐานข้อมูล"] },
-  { code: "03754221-67", name: "Basic English Pronunciation", terms: ["english pronunciation", "pronunciation", "อังกฤษ", "การออกเสียง"] },
-  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", terms: ["quantitative", "decision making", "quant", "วิเคราะห์เชิงปริมาณ"] },
-  { code: "01362101-67", name: "Chinese I", terms: ["chinese", "จีน"] },
+  { code: "01132326-65", name: "Organization Development", short: "OD", terms: ["od", "organization development", "organized development", "org dev", "org", "องค์การ", "พัฒนาองค์การ"] },
+  { code: "03521101-67", name: "Sea and Life", short: "C", terms: ["c", "sea", "sea and life", "ทะเล", "ชีวิตกับทะเล"] },
+  { code: "01132417-65", name: "Sustainability Management", short: "Sustain", terms: ["sustain", "sustainability", "sustainability management", "ความยั่งยืน"] },
+  { code: "01132333-65", name: "Business Information Systems", short: "BIS", terms: ["bis", "business information systems", "database", "ระบบสารสนเทศ", "ฐานข้อมูล"] },
+  { code: "03754221-67", name: "Basic English Pronunciation", short: "Eng", terms: ["eng", "english", "english pronunciation", "pronunciation", "อังกฤษ", "การออกเสียง"] },
+  { code: "01132332-65", name: "Quantitative Analysis for Decision Making", short: "QA", terms: ["qa", "qadm", "quantitative", "decision making", "quant", "วิเคราะห์เชิงปริมาณ"] },
+  { code: "01362101-67", name: "Chinese I", short: "Chinese", terms: ["chinese", "จีน"] },
   { code: "FIN000", name: "Finance", terms: ["finance", "financial", "ไฟแนนซ์", "การเงิน"] },
   { code: "ACC000", name: "Accounting", terms: ["accounting", "account", "บัญชี"] },
   { code: "MKT000", name: "Marketing", terms: ["marketing", "market", "การตลาด"] }
@@ -196,7 +197,12 @@ function parseDateLoose(text) {
   for (const [label, targetDay] of nextDayMap) {
     if (lower.includes(label)) {
       let diff = targetDay - now.getDay();
-      if (diff <= 0) diff += 7;
+      if (/(next|หน้า)/i.test(lower)) {
+        if (diff <= 0) diff += 7;
+        else diff += 7;
+      } else if (diff < 0) {
+        diff += 7;
+      }
       return addDays(now, diff);
     }
   }
@@ -206,6 +212,17 @@ function parseDateLoose(text) {
   const shortDate = text.match(/\b(\d{1,2})[/-](\d{1,2})\b/);
   if (shortDate) return new Date(now.getFullYear(), Number(shortDate[2]) - 1, Number(shortDate[1]), 12);
   return addDays(now, 3);
+}
+
+function parseTimeLoose(text) {
+  const explicit = text.match(/\b([01]?\d|2[0-3])[:.](\d{2})\b/);
+  if (explicit) return `${explicit[1].padStart(2, "0")}:${explicit[2]}`;
+  if (/(morning|เช้า)/i.test(text)) return "09:00";
+  if (/(noon|เที่ยง)/i.test(text)) return "12:00";
+  if (/(afternoon|บ่าย)/i.test(text)) return "15:00";
+  if (/(evening|เย็น)/i.test(text)) return "18:00";
+  if (/(tonight|คืนนี้)/i.test(text)) return "21:00";
+  return DEFAULT_DUE_TIME;
 }
 
 function addDays(date, days) {
@@ -237,6 +254,18 @@ function termMatches(text, term) {
   return lower.includes(needle);
 }
 
+function termReplacePattern(term) {
+  const escaped = escapeRegExp(term);
+  if (/^[a-z0-9]{1,4}$/i.test(term)) {
+    return new RegExp(`(^|[^a-z0-9])${escaped}(?=[^a-z0-9]|$)`, "gi");
+  }
+  return new RegExp(escaped, "gi");
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function ensureCourse(courseCode) {
   const existing = state.courses.find((course) => course.code === courseCode);
   if (existing) return existing;
@@ -251,11 +280,39 @@ function ensureCourse(courseCode) {
   return course;
 }
 
+function courseAliasFor(code) {
+  return courseAliases.find((item) => item.code === code);
+}
+
+function courseForCode(code) {
+  return state.courses.find((course) => course.code === code);
+}
+
+function courseShort(code) {
+  return courseAliasFor(code)?.short || courseForCode(code)?.short || code;
+}
+
+function courseDisplay(code) {
+  const course = courseForCode(code);
+  const alias = courseAliasFor(code);
+  if (!course && !alias) return code;
+  const short = alias?.short || course?.short || code;
+  const name = course?.name || alias?.name || code;
+  return name === short ? short : `${short} · ${name}`;
+}
+
 function extractTitle(text, courseCode) {
-  const cleaned = text
-    .replace(courseCode, "")
+  const alias = courseAliasFor(courseCode);
+  let cleaned = text.replace(courseCode, "");
+  if (alias) {
+    for (const term of alias.terms) {
+      cleaned = cleaned.replace(termReplacePattern(term), " ");
+    }
+  }
+  cleaned = cleaned
     .replace(/(?:วิชา|class|course)\s*[^\s,，:：]+(?:\s+[^\s,，:：]+)?/gi, " ")
-    .replace(/(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started)/gi, " ")
+    .replace(/(วิชา|class|course|มี|ส่ง|due|deadline|ต้อง|ทำ|ยังไม่ได้เริ่ม|not started|วันนี้|พรุ่งนี้|มะรืน|นี้|จันทร์|อังคาร|พุธ|พฤหัส|ศุกร์|เสาร์|อาทิตย์|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next|morning|noon|afternoon|evening|tonight|เช้า|เที่ยง|บ่าย|เย็น|คืนนี้)/gi, " ")
+    .replace(/\b([01]?\d|2[0-3])[:.]\d{2}\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return cleaned || "Review and organize course task";
@@ -283,6 +340,7 @@ function taskFromBrainDump(text) {
     courseCode,
     title: extractTitle(text, courseCode),
     due: dueDate.toISOString().slice(0, 10),
+    dueTime: parseTimeLoose(text),
     status,
     completedAt: status === "done" ? new Date().toISOString() : null,
     estimate: priority === "high" ? 45 : 35,
@@ -292,13 +350,18 @@ function taskFromBrainDump(text) {
 }
 
 function normalizeTaskCompletion(task) {
+  if (!task.dueTime) task.dueTime = DEFAULT_DUE_TIME;
   if (task.status === "done" && !task.completedAt) task.completedAt = new Date().toISOString();
   if (task.status !== "done" && task.completedAt) task.completedAt = null;
   return task;
 }
 
 function formatDate(iso) {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: TIME_ZONE });
+}
+
+function formatTaskDue(task) {
+  return `${formatDate(task.due)} ${task.dueTime || DEFAULT_DUE_TIME}`;
 }
 
 function daysUntil(iso) {
@@ -366,7 +429,7 @@ function renderClassCard(classItem, showDay = false) {
           ${showDay ? `<div class="class-day">${escapeHtml(classItem.day)}</div>` : ""}
           <p class="task-title">${escapeHtml(classItem.title)}</p>
           <div class="task-meta">
-            <span class="tag">${escapeHtml(classItem.courseCode)}</span>
+            <span class="tag" title="${escapeHtml(classItem.courseCode)}">${escapeHtml(courseShort(classItem.courseCode))}</span>
             <span>Room ${escapeHtml(classItem.room)}</span>
             <span>Sec ${escapeHtml(classItem.section)}</span>
           </div>
@@ -387,8 +450,8 @@ function renderTask(task, compact = false) {
         <div>
           <p class="task-title">${escapeHtml(task.title)}</p>
           <div class="task-meta">
-            <span class="tag">${escapeHtml(task.courseCode)}</span>
-            <span>${formatDate(task.due)}</span>
+            <span class="tag" title="${escapeHtml(task.courseCode)}">${escapeHtml(courseShort(task.courseCode))}</span>
+            <span>${formatTaskDue(task)}</span>
             <span>${dueText}</span>
             <span>${task.estimate} min</span>
           </div>
@@ -418,7 +481,7 @@ function renderDoneTaskRow(task) {
         <p class="task-title">${escapeHtml(task.title)}</p>
         <div class="task-meta">
           <span>${doneDate}</span>
-          <span>Due ${formatDate(task.due)}</span>
+          <span>Due ${formatTaskDue(task)}</span>
         </div>
       </div>
       <button class="plain-btn danger" data-action="delete-task" data-id="${task.id}" type="button" title="Delete submitted task" aria-label="Delete submitted task">
@@ -446,7 +509,7 @@ function renderDashboard() {
     ? open.slice(0, 12).map((task) => renderTask(task, true)).join("")
     : `<div class="empty-state">No upcoming deadlines.</div>`;
   $("#nextDeadline").innerHTML = open[0]
-    ? `<strong>Next deadline</strong><p>${escapeHtml(open[0].courseCode)} · ${escapeHtml(open[0].title)} · ${formatDate(open[0].due)}</p>`
+    ? `<strong>Next deadline</strong><p>${escapeHtml(courseDisplay(open[0].courseCode))} · ${escapeHtml(open[0].title)} · ${formatTaskDue(open[0])}</p>`
     : `<strong>All clear</strong><p>No deadline has been captured yet.</p>`;
 
   renderWeek();
@@ -521,24 +584,27 @@ function renderCourses() {
   $("#courseList").innerHTML = state.courses.map((course) => {
     const tasks = state.tasks.filter((task) => task.courseCode === course.code);
     const active = tasks.filter((task) => task.status !== "done").length;
-    const doneThisWeek = tasks.filter(isDoneThisWeek).sort((a, b) => String(b.completedAt || b.due).localeCompare(String(a.completedAt || a.due)));
+    const doneTasks = tasks
+      .filter((task) => task.status === "done")
+      .sort((a, b) => String(b.completedAt || b.due).localeCompare(String(a.completedAt || a.due)));
+    const doneHistory = doneTasks.slice(0, 20);
     return `
       <article class="course-card">
         <div class="course-row">
           <div>
-            <p class="task-title">${escapeHtml(course.code)}</p>
-            <div class="task-meta">${escapeHtml(course.name)}</div>
+            <p class="task-title">${escapeHtml(courseShort(course.code))}</p>
+            <div class="task-meta">${escapeHtml(course.name)} · ${escapeHtml(course.code)}</div>
           </div>
-          <span class="tag">${active} active</span>
+          <span class="tag">${active} active · ${doneTasks.length} done</span>
         </div>
-        <div class="task-meta">${doneThisWeek.length} submitted this week</div>
+        <div class="task-meta">${doneTasks.length} done history</div>
         <details class="course-done-panel">
           <summary>
-            <span>Submitted this week</span>
-            <span>${doneThisWeek.length}</span>
+            <span>Done history</span>
+            <span>${doneTasks.length}</span>
           </summary>
           <div class="done-task-list">
-            ${doneThisWeek.length ? doneThisWeek.map(renderDoneTaskRow).join("") : `<div class="empty-state">No submitted tasks this week.</div>`}
+            ${doneHistory.length ? doneHistory.map(renderDoneTaskRow).join("") : `<div class="empty-state">No completed tasks yet.</div>`}
           </div>
         </details>
       </article>
@@ -552,7 +618,7 @@ function renderCalendar() {
   $("#timeline").innerHTML = open.length
     ? open.map((task) => `
       <article class="timeline-item ${task.priority}">
-        <p class="task-title">${formatDate(task.due)} · ${escapeHtml(task.courseCode)}</p>
+        <p class="task-title">${formatTaskDue(task)} · ${escapeHtml(courseShort(task.courseCode))}</p>
         <div class="task-meta">${escapeHtml(task.title)} · ${priorityLabel(task.priority)}</div>
       </article>
     `).join("")
@@ -741,7 +807,7 @@ $("#brainForm").addEventListener("submit", async (event) => {
   state.chat.push({ role: "user", text });
   state.chat.push({
     role: "hermes",
-    text: `ผมจับได้ว่าเป็น ${task.courseCode}: ${task.title} ส่ง ${formatDate(task.due)} เพิ่มเข้า Dashboard แล้ว และตั้ง priority เป็น ${priorityLabel(task.priority)}`
+    text: `เพิ่มแล้ว: ${courseShort(task.courseCode)} - ${task.title} ส่ง ${formatTaskDue(task)}`
   });
   renderAll();
 });
@@ -836,3 +902,4 @@ $("#searchButton").addEventListener("click", () => {
 renderAll({ persist: false });
 loadStateFromApi({ silent: true });
 setInterval(() => loadStateFromApi({ silent: true }), 4000);
+
