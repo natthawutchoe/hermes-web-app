@@ -65,7 +65,7 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    await message.reply(`Added to Hermes: ${payload.task.courseCode} - ${payload.task.title} (${payload.task.due})`);
+    await message.reply(payload.reply || `Added to Hermes: ${payload.task.courseCode} - ${payload.task.title} (${payload.task.due} ${payload.task.dueTime || "23:59"})`);
   } catch (error) {
     console.error(error);
     await message.reply("Hermes received it, but I could not sync it to the dashboard yet.");
